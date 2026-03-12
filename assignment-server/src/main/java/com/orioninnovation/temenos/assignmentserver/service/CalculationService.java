@@ -20,10 +20,8 @@ public class CalculationService {
         this.calculationManager = calculationManager;
     }
 
-    public String calculate(StartRequest request) throws InterruptedException {
+    public String startCalculation(StartRequest request) throws InterruptedException {
         Calculation calculation = new Calculation(request.getNumber(), request.getThreadCount());
-        calculation.setNumber(request.getNumber());
-        calculation.setThreadCount(request.getThreadCount());
         String id = calculationManager.register(calculation);
 
         calculationManager.startCalculation(calculation);
@@ -32,5 +30,8 @@ public class CalculationService {
     }
     public boolean stopCalculation(String id) {
         return calculationManager.stopCalculation(id);
+    }
+    public Calculation getCalculationById(String id) {
+        return calculationManager.getCalculationById(id);
     }
 }

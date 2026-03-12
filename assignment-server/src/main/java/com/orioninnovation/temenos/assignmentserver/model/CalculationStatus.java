@@ -4,5 +4,6 @@ public enum CalculationStatus {
     PENDING,
     RUNNING,
     STOPPED,
-    COMPLETED
+    COMPLETED,
+    FAILED
 }

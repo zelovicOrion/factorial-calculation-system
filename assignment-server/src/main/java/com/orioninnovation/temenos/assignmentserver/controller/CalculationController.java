@@ -1,10 +1,14 @@
 package com.orioninnovation.temenos.assignmentserver.controller;
 
 import com.orioninnovation.temenos.assignmentserver.dto.StartRequest;
+import com.orioninnovation.temenos.assignmentserver.model.Calculation;
 import com.orioninnovation.temenos.assignmentserver.service.CalculationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigInteger;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/factorial")
@@ -15,12 +19,13 @@ public class CalculationController {
         this.calculationService = calculationService;
     }
     @PostMapping("/start")
-    public String start(@RequestBody StartRequest request) throws InterruptedException {
+    public ResponseEntity<Map<String, String>> startCalculation(@RequestBody StartRequest request) throws InterruptedException {
 
-        return calculationService.calculate(request).toString();
+        String id = calculationService.startCalculation(request).toString();
+        return ResponseEntity.ok(Map.of("id", id));
     }
     @PostMapping("/stop/{id}")
-    public ResponseEntity<String> stop(@PathVariable String id) {
+    public ResponseEntity<String> stopCalculation(@PathVariable String id) {
         boolean stopped = calculationService.stopCalculation(id);
         if(stopped) {
             return ResponseEntity.ok("Calculation stopped successfully.");
@@ -28,5 +33,31 @@ public class CalculationController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Calculation not found or already completed.");
         }
     }
+    @GetMapping("/status/{id}")
+    public ResponseEntity<Map<String, String>> getCalculationStatus(@PathVariable String id) {
+        Calculation calculation = calculationService.getCalculationById(id);
+
+        if (calculation == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Calculation not found"));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "id", calculation.getId(),
+                "status", calculation.getStatus().name()
+        ));
+    }
+    @GetMapping("/result/{id}")
+    public ResponseEntity<Map<String, String>> getCalculationResult(@PathVariable String id) {
+        Calculation calculation = calculationService.getCalculationById(id);
+        if (calculation == null || calculation.getResult() == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Calculation not found or not completed"));
+        }
+        return ResponseEntity.ok(Map.of(
+                "id", calculation.getId(),
+                "result", calculation.getResult().toString()
+        ));
+    }
+
 
 }

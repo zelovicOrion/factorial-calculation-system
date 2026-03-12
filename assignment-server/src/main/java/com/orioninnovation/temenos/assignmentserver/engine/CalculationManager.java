@@ -51,10 +51,14 @@ public class CalculationManager {
                 calculation.setResult(result);
                 calculation.setStatus(CalculationStatus.COMPLETED);
                 storageService.update(calculation);
-            } catch (Exception e) {
-                calculation.setStatus(CalculationStatus.STOPPED);
-                storageService.update(calculation);
-                e.printStackTrace();
+            } catch (RuntimeException e) {
+                if ("Calculation stopped by user".equals(e.getCause() != null ? e.getCause().getMessage() : e.getMessage())) {
+                    calculation.setStatus(CalculationStatus.STOPPED);
+                    storageService.update(calculation);
+                } else {
+                    calculation.setStatus(CalculationStatus.FAILED);
+                    storageService.update(calculation);
+                }
             }
         });
         calculations.put(calculation.getId(), calculation);
@@ -70,5 +74,8 @@ public class CalculationManager {
             return true;
         }
         return false;
+    }
+    public Calculation getCalculationById(String id) {
+        return calculations.get(id);
     }
 }
