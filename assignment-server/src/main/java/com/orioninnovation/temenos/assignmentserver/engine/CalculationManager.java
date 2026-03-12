@@ -46,7 +46,7 @@ public class CalculationManager {
 
         CompletableFuture.runAsync(() -> {
             try {
-                FactorialTask task = new FactorialTask(1, calculation.getNumber());
+                FactorialTask task = new FactorialTask(1, calculation.getNumber(), calculation);
                 BigInteger result = pool.invoke(task);
                 calculation.setResult(result);
                 calculation.setStatus(CalculationStatus.COMPLETED);
@@ -58,5 +58,17 @@ public class CalculationManager {
             }
         });
         calculations.put(calculation.getId(), calculation);
+    }
+    public boolean stopCalculation(String id) {
+        Calculation calculation = calculations.get(id);
+        if(calculation == null) {
+            return false;
+        }
+        if(calculation.getStatus() == CalculationStatus.RUNNING) {
+            calculation.setStatus(CalculationStatus.STOPPED);
+            storageService.update(calculation);
+            return true;
+        }
+        return false;
     }
 }

@@ -1,15 +1,21 @@
 package com.orioninnovation.temenos.assignmentserver.engine;
 
+import com.orioninnovation.temenos.assignmentserver.model.CalculationStatus;
+
 import java.math.BigInteger;
 import java.util.concurrent.RecursiveTask;
+import com.orioninnovation.temenos.assignmentserver.model.Calculation;
 
 public class FactorialTask extends RecursiveTask<BigInteger> {
     private final long start;
     private final long end;
+    private final Calculation calculation;
 
-    public FactorialTask(long start, long end) {
+    public FactorialTask(long start, long end, Calculation calculation) {
         this.start = start;
         this.end = end;
+        this.calculation = calculation;
+
     }
 
     @Override
@@ -18,11 +24,11 @@ public class FactorialTask extends RecursiveTask<BigInteger> {
             BigInteger result = BigInteger.ONE;
 
             for(long i = start; i <=end; i++){
-                if(Thread.currentThread().isInterrupted()) {
-                    throw new RuntimeException("Calculation interrupted");
+                if (calculation.getStatus() == CalculationStatus.STOPPED) {
+                    throw new RuntimeException("Calculation stopped by user");
                 }
                 try {
-                    Thread.sleep(200);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new RuntimeException("Calculation interrupted");
@@ -33,8 +39,8 @@ public class FactorialTask extends RecursiveTask<BigInteger> {
         }
         long mid = (start + end) / 2;
 
-        FactorialTask left = new FactorialTask(start, mid);
-        FactorialTask right = new FactorialTask(mid + 1, end);
+        FactorialTask left = new FactorialTask(start, mid, calculation);
+        FactorialTask right = new FactorialTask(mid + 1, end, calculation);
 
         left.fork();
         BigInteger rightResult = right.compute();

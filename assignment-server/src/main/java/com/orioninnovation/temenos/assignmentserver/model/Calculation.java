@@ -9,7 +9,7 @@ public class Calculation {
     private String id;
     private long number;
     private int threadCount;
-    private CalculationStatus status;
+    private volatile CalculationStatus status;
     private BigInteger result;
 
     public Calculation(long number, int threadCount) {

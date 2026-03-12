@@ -30,4 +30,7 @@ public class CalculationService {
 
         return id;
     }
+    public boolean stopCalculation(String id) {
+        return calculationManager.stopCalculation(id);
+    }
 }
