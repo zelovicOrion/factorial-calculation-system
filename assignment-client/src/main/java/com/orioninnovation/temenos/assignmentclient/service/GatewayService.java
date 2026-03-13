@@ -1,6 +1,10 @@
 package com.orioninnovation.temenos.assignmentclient.service;
 
+import com.orioninnovation.temenos.assignmentclient.dto.ResultResponse;
 import com.orioninnovation.temenos.assignmentclient.dto.StartRequest;
+import com.orioninnovation.temenos.assignmentclient.dto.StartResponse;
+import com.orioninnovation.temenos.assignmentclient.dto.StatusResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -14,8 +18,8 @@ import java.util.Map;
 public class GatewayService {
 
     private final RestTemplate restTemplate;
-    private static final String BASE_URL = "http://localhost:8080/factorial";
-
+    @Value("${server.factorial.url}")
+    private String baseUrl;
     public GatewayService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -27,11 +31,15 @@ public class GatewayService {
         if(request.getThreadCount() <= 0) {
             throw new IllegalArgumentException("Thread count must be greater than zero");
         }
-        return restTemplate.postForObject(BASE_URL + "/start", request, String.class);
+        StartResponse response = restTemplate.postForObject(baseUrl + "/start", request, StartResponse.class);
+        if(response == null) {
+            return null;
+        }
+        return response.getId();
     }
     public boolean stopCalculation(String id) {
         try {
-            ResponseEntity<String> response = restTemplate.postForEntity(BASE_URL + "/stop/" + id, null, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(baseUrl + "/stop/" + id, null, String.class);
             return response.getStatusCode().is2xxSuccessful();
         } catch (HttpClientErrorException.NotFound e) {
             return false;
@@ -40,17 +48,17 @@ public class GatewayService {
         }
     }
     public String getCalculationStatus(String id) {
-        Map<String, String> response = restTemplate.getForObject(BASE_URL + "/status/" + id, Map.class);
-        if (response == null || !response.containsKey("status")) {
+        StatusResponse response = restTemplate.getForObject(baseUrl + "/status/" + id, StatusResponse.class);
+        if (response == null || response.getStatus() == null) {
             return null;
         }
-        return response.get("status");
+        return response.getStatus();
     }
     public BigInteger getCalculationResult(String id) {
-        Map<String, String> response = restTemplate.getForObject(BASE_URL + "/result/" + id, Map.class);
-        if (response == null || !response.containsKey("result")) {
+        ResultResponse response = restTemplate.getForObject(baseUrl + "/result/" + id, ResultResponse.class);
+        if (response == null || response.getResult() == null) {
             return null;
         }
-        return new BigInteger(response.get("result"));
+        return new BigInteger(response.getResult());
     }
 }

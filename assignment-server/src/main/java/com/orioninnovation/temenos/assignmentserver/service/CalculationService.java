@@ -28,10 +28,10 @@ public class CalculationService {
 
         return id;
     }
-    public boolean stopCalculation(String id) {
+    public boolean stopCalculation(String id) throws InterruptedException {
         return calculationManager.stopCalculation(id);
     }
-    public Calculation getCalculationById(String id) {
+    public Calculation getCalculationById(String id) throws InterruptedException {
         return calculationManager.getCalculationById(id);
     }
 }

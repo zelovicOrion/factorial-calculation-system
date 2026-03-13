@@ -17,7 +17,9 @@ import java.util.concurrent.Semaphore;
 public class CalculationManager {
 
     private final Map<String, Calculation> calculations = new ConcurrentHashMap<>();
-    private final Semaphore semaphore = new Semaphore(1);
+    private final Semaphore mutex = new Semaphore(1);
+    private final Semaphore rwLock = new Semaphore(1);
+    private int readCount = 0;
     private final StorageService storageService;
 
     public CalculationManager(StorageService storageService) {
@@ -25,7 +27,7 @@ public class CalculationManager {
     }
 
     public String register(Calculation calculation) throws InterruptedException {
-        semaphore.acquire();
+        rwLock.acquire();
         try {
             String id = UUID.randomUUID().toString();
             calculation.setId(id);
@@ -34,48 +36,73 @@ public class CalculationManager {
             storageService.save(calculation);
             return id;
         } finally {
-            semaphore.release();
+            rwLock.release();
         }
     }
 
-    public void startCalculation(Calculation calculation) {
-        calculation.setStatus(CalculationStatus.RUNNING);
-        storageService.update(calculation);
-        
-        ForkJoinPool pool = new ForkJoinPool(calculation.getThreadCount());
-
-        CompletableFuture.runAsync(() -> {
-            try {
-                FactorialTask task = new FactorialTask(1, calculation.getNumber(), calculation);
-                BigInteger result = pool.invoke(task);
-                calculation.setResult(result);
-                calculation.setStatus(CalculationStatus.COMPLETED);
-                storageService.update(calculation);
-            } catch (RuntimeException e) {
-                if ("Calculation stopped by user".equals(e.getCause() != null ? e.getCause().getMessage() : e.getMessage())) {
-                    calculation.setStatus(CalculationStatus.STOPPED);
-                    storageService.update(calculation);
-                } else {
-                    calculation.setStatus(CalculationStatus.FAILED);
-                    storageService.update(calculation);
-                }
-            }
-        });
-        calculations.put(calculation.getId(), calculation);
-    }
-    public boolean stopCalculation(String id) {
-        Calculation calculation = calculations.get(id);
-        if(calculation == null) {
-            return false;
-        }
-        if(calculation.getStatus() == CalculationStatus.RUNNING) {
-            calculation.setStatus(CalculationStatus.STOPPED);
+    public void startCalculation(Calculation calculation) throws InterruptedException {
+        rwLock.acquire();
+        try {
+            calculation.setStatus(CalculationStatus.RUNNING);
             storageService.update(calculation);
-            return true;
+
+            ForkJoinPool pool = new ForkJoinPool(calculation.getThreadCount());
+
+            CompletableFuture.runAsync(() -> {
+                try {
+                    FactorialTask task = new FactorialTask(1, calculation.getNumber(), calculation);
+                    BigInteger result = pool.invoke(task);
+                    if (calculation.getStatus() == CalculationStatus.RUNNING) {
+                        calculation.setResult(result);
+                        calculation.setStatus(CalculationStatus.COMPLETED);
+                        storageService.update(calculation);
+                    }
+                } catch (RuntimeException e) {
+                    if (calculation.getStatus() != CalculationStatus.STOPPED) {
+                        calculation.setStatus(CalculationStatus.FAILED);
+                    }
+                    storageService.update(calculation);
+                } finally {
+                    pool.shutdown();
+                }
+            }, pool);
+            calculations.put(calculation.getId(), calculation);
+        } finally {
+            rwLock.release();
         }
-        return false;
     }
-    public Calculation getCalculationById(String id) {
-        return calculations.get(id);
+    public boolean stopCalculation(String id) throws InterruptedException {
+        rwLock.acquire();
+        try {
+            Calculation calculation = calculations.get(id);
+            if(calculation == null) {
+                return false;
+            }
+            if(calculation.getStatus() == CalculationStatus.RUNNING) {
+                calculation.setStatus(CalculationStatus.STOPPED);
+                storageService.update(calculation);
+                return true;
+            }
+            return false;
+        } finally {
+            rwLock.release();
+        }
+    }
+    public Calculation getCalculationById(String id) throws InterruptedException {
+        mutex.acquire();
+        readCount++;
+        if(readCount == 1) {
+            rwLock.acquire();
+        }
+        mutex.release();
+        Calculation calculation = calculations.get(id);
+        mutex.acquire();
+        readCount--;
+        if(readCount == 0){
+            rwLock.release();
+        }
+        mutex.release();
+
+        return calculation;
     }
 }

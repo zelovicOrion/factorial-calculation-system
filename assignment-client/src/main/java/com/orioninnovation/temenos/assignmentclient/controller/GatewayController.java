@@ -1,6 +1,6 @@
 package com.orioninnovation.temenos.assignmentclient.controller;
 
-import com.orioninnovation.temenos.assignmentclient.dto.StartRequest;
+import com.orioninnovation.temenos.assignmentclient.dto.*;
 import com.orioninnovation.temenos.assignmentclient.service.GatewayService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,48 +20,40 @@ public class GatewayController {
         this.gatewayService = gatewayService;
     }
     @PostMapping("/start")
-    public String start(@RequestBody StartRequest request) {
-        return gatewayService.startCalculation(request);
+    public ResponseEntity<ApiResponse<StartResponse>> start(@RequestBody StartRequest request) {
+        String id = gatewayService.startCalculation(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, new StartResponse(id), null));
     }
 
     @PostMapping("/stop/{id}")
-    public ResponseEntity<String> stop(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<String>> stop(@PathVariable String id) {
         boolean stopped = gatewayService.stopCalculation(id);
         if (stopped) {
-            return ResponseEntity.ok("Calculation stopped successfully.");
+            return ResponseEntity.ok(new ApiResponse<>(true, "Calculation stopped successfully.", null));
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Calculation not found or already completed.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, null, "Calculation not found or already completed."));
         }
     }
 
     @GetMapping("/getStatus/{id}")
-    public ResponseEntity<Map<String, String>> getStatus(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<StatusResponse>> getStatus(@PathVariable String id) {
         try {
             String status = gatewayService.getCalculationStatus(id);
-            Map<String, String> response = new HashMap<>();
-            response.put("id", id);
-            response.put("status", status);
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(new ApiResponse<>(true, new StatusResponse(id, status), null));
         } catch (HttpClientErrorException.NotFound e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Calculation not found");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, null, "Calculation not found"));
         }
     }
     @GetMapping("/getResult/{id}")
-    public ResponseEntity<Map<String, String>> getResult(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<ResultResponse>> getResult(@PathVariable String id) {
         try {
             BigInteger result = gatewayService.getCalculationResult(id);
-            Map<String, String> response = new HashMap<>();
-            response.put("id", id);
-            response.put("result", result.toString());
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(new ApiResponse<>(true, new ResultResponse(id, result.toString()), null));
         } catch (HttpClientErrorException.NotFound e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Calculation not found or not completed");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, null, "Calculation not found or not completed"));
         }
     }
 

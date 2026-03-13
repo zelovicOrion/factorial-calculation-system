@@ -25,7 +25,7 @@ public class CalculationController {
         return ResponseEntity.ok(Map.of("id", id));
     }
     @PostMapping("/stop/{id}")
-    public ResponseEntity<String> stopCalculation(@PathVariable String id) {
+    public ResponseEntity<String> stopCalculation(@PathVariable String id) throws InterruptedException {
         boolean stopped = calculationService.stopCalculation(id);
         if(stopped) {
             return ResponseEntity.ok("Calculation stopped successfully.");
@@ -34,7 +34,7 @@ public class CalculationController {
         }
     }
     @GetMapping("/status/{id}")
-    public ResponseEntity<Map<String, String>> getCalculationStatus(@PathVariable String id) {
+    public ResponseEntity<Map<String, String>> getCalculationStatus(@PathVariable String id) throws InterruptedException {
         Calculation calculation = calculationService.getCalculationById(id);
 
         if (calculation == null) {
@@ -48,7 +48,7 @@ public class CalculationController {
         ));
     }
     @GetMapping("/result/{id}")
-    public ResponseEntity<Map<String, String>> getCalculationResult(@PathVariable String id) {
+    public ResponseEntity<Map<String, String>> getCalculationResult(@PathVariable String id) throws InterruptedException {
         Calculation calculation = calculationService.getCalculationById(id);
         if (calculation == null || calculation.getResult() == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Calculation not found or not completed"));
